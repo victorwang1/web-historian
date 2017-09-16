@@ -39,7 +39,7 @@ exports.handleRequest = function (req, res) {
             // if requestedUrl is in list
               // ask http-helper to serve request
             console.log('requested url is in list');
-            var website = './' + requestedUrl;
+            var website = './' + requestedUrl + '.html';
             url = path.join(archive.paths.archivedSites, website);
             httpHelper.serveAssets(res, url, httpHelper.sendResponse);
           } else {
