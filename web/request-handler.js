@@ -34,8 +34,8 @@ exports.handleRequest = function (req, res) {
       if (!validateUrl(requestedUrl)) {
         httpHelper.sendResponse(res, 300, 'input url not valid');
       } else {
-        archive.isUrlInList(requestedUrl, function(inList) {
-          if (inList === true) {
+        archive.isUrlInList(requestedUrl, function(inList, archived) {
+          if (inList && !archived) {
             // if requestedUrl is in list
               // ask http-helper to serve request
             console.log('requested url is in list');
@@ -45,11 +45,11 @@ exports.handleRequest = function (req, res) {
           } else {
             // otherwise
               // serve loading page
-            console.log('requested url NOT in list');
+            console.log('requested url NOT in list or has not been archived');
             url = path.join(archive.paths.siteAssets, './loading.html');
             httpHelper.serveAssets(res, url, httpHelper.sendResponse, 200);
             // add url to list
-            archive.addUrlToList(requestedUrl);
+            if (!archived) archive.addUrlToList(requestedUrl);
           }
         })
       }
@@ -57,6 +57,6 @@ exports.handleRequest = function (req, res) {
   } else if (url = routes[req.url]) {
     httpHelper.serveAssets(res, url, httpHelper.sendResponse);
   } else {
-    httpHelper.sendResponse(res, 404, '404 not found');
+    httpHelper.sendResponse(res, 404, 'Request not valid');
   }
 };

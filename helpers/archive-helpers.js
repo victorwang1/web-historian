@@ -1,13 +1,8 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
-
-/*
- * You will need to reuse the same paths many times over in the course of this sprint.
- * Consider using the `paths` object below to store frequently used file paths. This way,
- * if you move any files, you'll only need to change your code in one place! Feel free to
- * customize it in any way you wish.
- */
+var http = require('http');
+var httpHelper = require('../web/http-helpers');
 
 exports.paths = {
   siteAssets: path.join(__dirname, '../web/public'),
@@ -22,19 +17,11 @@ exports.initialize = function(pathsObj) {
   });
 };
 
-// The following function names are provided to you to suggest how you might
-// modularize your code. Keep it clean!
-
-// exports.urlList = [];
-exports.urlList = '';
 
 exports.readListOfUrls = function(callback) {
   fs.readFile(exports.paths.list, 'utf8', function(err, data) {
     if (!err) {
-      // exports.urlList = data.split('\r\n')
-      //                       .map((url) => url.trim());
-      exports.urlList = data;
-      callback();
+      callback(data);
     } else {
       console.log("cannot read url list");
     }
@@ -42,12 +29,12 @@ exports.readListOfUrls = function(callback) {
 };
 
 exports.isUrlInList = function(url, callback) {
-  exports.readListOfUrls(function() {
-    // console.log(exports.urlList);
-    // console.log(url);
-    // console.log(exports.urlList.includes(url));
-    if (exports.urlList.includes(url)) callback(true);
-    else callback(false);
+  exports.readListOfUrls(function(data) {
+    var location = data.indexOf(url);
+    var archived = data[data.indexOf('\r\n', location) - 1] === '*';
+    if (location > -1) {
+      callback(true, archived);
+    } else callback(false);
   });
 };
 
@@ -63,10 +50,35 @@ exports.addUrlToList = function(url) {
   });
 };
 
-exports.isUrlArchived = function(url, callback) {
+exports.archivedUrls = function(callback) {
+  exports.readListOfUrls(function(data) {
+    callback(data.split('\r\n')
+                 .map((url) => url.trim())
+                 .filter((url) => url.includes('*')));
+  });
+};
 
+exports.writeFile = function(fileName, content) {
+  var filePath = path.join(exports.paths.archivedSites, fileName);
+  fs.writeFile(filePath, content, function(err) {
+    if (err) console.log('cannot save webpage');
+    else console.log('site saved successfully');
+  })
 };
 
 exports.downloadUrls = function(urls) {
-  var httpHelper = require('./http-helpers');
+  urls.forEach((url) => {
+    var options = {
+      host: url,
+      port: 80,
+      path: '/index.html'
+    };
+    http.get(options, function(res) {
+      console.log(res);
+      exports.writeFile(url, res);
+      console.log("Got response: " + res.statusCode);
+    }).on('error', function(e) {
+      console.log("Got error: " + e.message);
+    });
+  });
 };
