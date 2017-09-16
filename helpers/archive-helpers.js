@@ -58,25 +58,22 @@ exports.archivedUrls = function(callback) {
   });
 };
 
-exports.writeFile = function(fileName, content) {
-  var filePath = path.join(exports.paths.archivedSites, fileName);
-  fs.writeFile(filePath, content, function(err) {
-    if (err) console.log('cannot save webpage');
-    else console.log('site saved successfully');
-  })
-};
-
 exports.downloadUrls = function(urls) {
   urls.forEach((url) => {
     var options = {
       host: url,
       port: 80,
-      path: '/index.html'
+      path: '/'
     };
+    var filePath = path.join(exports.paths.archivedSites, url + '.html');
+    var file = fs.createWriteStream(filePath);
     http.get(options, function(res) {
-      console.log(res);
-      exports.writeFile(url, res);
-      console.log("Got response: " + res.statusCode);
+      res.on('data', function(data) {
+        file.write(data);
+      }).on('end', function() {
+        file.end();
+        console.log(url + 'downloaded!');
+      })
     }).on('error', function(e) {
       console.log("Got error: " + e.message);
     });
