@@ -26,6 +26,7 @@ exports.serveAssets = function(res, asset, callback = exports.sendResponse, stat
 };
 
 exports.sendResponse = function(res, statusCode, data) {
+  // console.log(data);
   res.writeHead(statusCode, exports.headers);
   res.end(data);
 }

@@ -2,6 +2,7 @@ var path = require('path');
 var archive = require('../helpers/archive-helpers');
 var httpHelper = require('./http-helpers');
 
+var fs = require('fs');
 
 
 // routing static html on base site
@@ -32,7 +33,7 @@ exports.handleRequest = function (req, res) {
   if (req.method === 'POST') {
     receivePost(req, function(requestedUrl) {
       if (!validateUrl(requestedUrl)) {
-        httpHelper.sendResponse(res, 200, 'input url not valid');
+        httpHelper.sendResponse(res, 300, 'input url not valid');
       } else {
         archive.isUrlInList(requestedUrl, function(inList) {
           if (inList) {
@@ -47,16 +48,14 @@ exports.handleRequest = function (req, res) {
               // serve loading page
             console.log('requested url NOT in list');
             url = path.join(archive.paths.siteAssets, './loading.html');
-            httpHelper.serveAssets(res, url, httpHelper.sendResponse);
+            httpHelper.serveAssets(res, url, httpHelper.sendResponse, 200);
           }
         })
       }
-
     });
-  }
-  if (url = routes[req.url]) {
+  } else if (url = routes[req.url]) {
     httpHelper.serveAssets(res, url, httpHelper.sendResponse);
   } else {
-    httpHelper.sendResponse(res, 404, 'not found');
+    httpHelper.sendResponse(res, 404, '404 not found');
   }
 };
