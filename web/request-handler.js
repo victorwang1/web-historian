@@ -2,8 +2,6 @@ var path = require('path');
 var archive = require('../helpers/archive-helpers');
 var httpHelper = require('./http-helpers');
 
-var fs = require('fs');
-
 
 // routing static html on base site
 var routes = {
@@ -12,20 +10,21 @@ var routes = {
   '/favicon.ico': path.join(archive.paths.siteAssets, './favicon.ico')
 };
 
+var validateUrl = function(url) {
+    var res = url.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g);
+    if (res === null) return false;
+    else return url;
+};
+
 // requests
 var receivePost = function(req, callback) {
   var data = '';
   req.on('data', function(chunk) {
     data += chunk;
   }).on('end', function() {
+    // raw data looks like 'url=www.google.com'
     callback(data.split('=')[1]);
   });
-};
-
-var validateUrl = function(url) {
-    var res = url.match(/(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g);
-    if (res === null) return false;
-    else return url;
 };
 
 exports.handleRequest = function (req, res) {
@@ -49,6 +48,8 @@ exports.handleRequest = function (req, res) {
             console.log('requested url NOT in list');
             url = path.join(archive.paths.siteAssets, './loading.html');
             httpHelper.serveAssets(res, url, httpHelper.sendResponse, 200);
+            // add url to list
+            archive.addUrlToList(requestedUrl);
           }
         })
       }
