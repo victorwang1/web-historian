@@ -1,4 +1,5 @@
-var fs = require('fs');
+var Promise = require('bluebird');
+var fs = Promise.promisifyAll(require('fs'));
 var path = require('path');
 var _ = require('underscore');
 var http = require('http');
@@ -17,65 +18,77 @@ exports.initialize = function(pathsObj) {
   });
 };
 
-
-exports.readListOfUrls = function(callback) {
-  fs.readFile(exports.paths.list, 'utf8', function(err, data) {
-    if (!err) {
-      callback(data);
-    } else {
-      console.log("cannot read url list");
-    }
-  });
+exports.readListOfUrlsAsync = function() {
+  return fs.readFileAsync(exports.paths.list, 'utf8')
+           .then(function(dataString) {
+             return dataString;
+           })
+           .catch(function(err) {
+             console.log("cannot read url list");
+             console.log(err);
+           });
 };
 
-exports.isUrlInList = function(url, callback) {
-  exports.readListOfUrls(function(data) {
-    var location = data.indexOf(url);
-    var archived = data[data.indexOf('\r\n', location) - 1] === '*';
-    if (location > -1) {
-      callback(true, archived);
-    } else callback(false);
-  });
+exports.isUrlInListAsync = function(url) {
+  return exports.readListOfUrlsAsync()
+                .then(function(dataString) {
+                  var location = dataString.indexOf(url);
+                  var archived = dataString[dataString.indexOf('\r\n', location) - 1] === '*';
+                  return {inList: location > -1,
+                          archived: archived};
+                });
 };
 
-exports.addUrlToList = function(url) {
+exports.addUrlToListAsync = function(url) {
   var writeContent = url + '*' + '\r\n';
-  fs.appendFile(exports.paths.list, writeContent, function(err) {
-    if (!err) {
-      console.log('write successful');
-    } else {
-      console.log('WRITE FAILED');
-      console.log(err);
-    }
-  });
+  return fs.appendFileAsync(exports.paths.list, writeContent, 'utf8')
+           .catch(function(err) {
+             console.log('WRITE FAILED');
+             console.log(err);
+           });
 };
 
-exports.archivedUrls = function(callback) {
-  exports.readListOfUrls(function(data) {
-    callback(data.split('\r\n')
-                 .map((url) => url.trim())
-                 .filter((url) => url.includes('*')));
+exports.archivedUrlsAsync = function() {
+  return exports.readListOfUrlsAsync()
+                .then(function(dataString) {
+                  return dataString.split('\r\n')
+                                   .map((url) => url.trim())
+                                   .filter((url) => url.includes('*'));
+                });
+};
+
+exports.downloadUrl = function(url) {
+  var options = {
+    host: url,
+    port: 80,
+    path: '/'
+  };
+  var filename = url.split('.')[1] + '.html';
+  var filePath = path.join(exports.paths.archivedSites, filename);
+  var file = fs.createWriteStream(filePath);
+  http.get(options, function(res) {
+    res.on('data', function(data) {
+      file.write(data);
+    }).on('end', function() {
+      file.end();
+      console.log(url + ' downloaded!');
+    })
+  }).on('error', function(e) {
+    console.log("Got error: " + e.message);
   });
 };
 
 exports.downloadUrls = function(urls) {
-  urls.forEach((url) => {
-    var options = {
-      host: url,
-      port: 80,
-      path: '/'
-    };
-    var filePath = path.join(exports.paths.archivedSites, url + '.html');
-    var file = fs.createWriteStream(filePath);
-    http.get(options, function(res) {
-      res.on('data', function(data) {
-        file.write(data);
-      }).on('end', function() {
-        file.end();
-        console.log(url + 'downloaded!');
-      })
-    }).on('error', function(e) {
-      console.log("Got error: " + e.message);
-    });
-  });
+  urls.forEach((url) => exports.downloadUrl(url.replace(/\*/g, '')));
+};
+
+exports.updateListAsync = function() {
+  return exports.readListOfUrlsAsync()
+                .then(function(dataString) {
+                  return fs.writeFileAsync(exports.paths.list, dataString.replace(/\*/g, ''));
+                })
+                .catch(function(err) {
+                  console.log('error replacing asterisks');
+                  console.log(err);
+                })
 };

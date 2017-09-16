@@ -1,5 +1,6 @@
+var Promise = require('bluebird');
 var path = require('path');
-var fs = require('fs');
+var fs = Promise.promisifyAll(require('fs'));
 var archive = require('../helpers/archive-helpers');
 
 exports.headers = {
@@ -10,26 +11,25 @@ exports.headers = {
   'Content-Type': 'text/html'
 };
 
-exports.serveAssets = function(res, asset, callback = exports.sendResponse, statusCode = 200) {
-  // Write some code here that helps serve up your static files!
-  // (Static files are things like html (yours or archived from others...),
-  // css, or anything that doesn't change often.)
-  console.log(asset);
-  fs.readFile(asset, 'utf8', function(err, data) {
-    if (!err) {
-      callback(res, statusCode, data);
-    } else {
-      console.log("cannot read file");
-    }
-  });
-};
-
 exports.sendResponse = function(res, statusCode, data) {
-  // console.log(data);
-  res.writeHead(statusCode, exports.headers);
-  res.end(data);
+  return new Promise(function(resolve) {
+    res.writeHead(statusCode, exports.headers);
+    res.end(data);
+    return data;
+  })
 }
 
-
-
-// As you progress, keep thinking about what helper functions you can put here!
+exports.serveAssets = function(res, asset, statusCode = 200) {
+  return fs.readFileAsync(asset, 'utf8')
+    .then(function(data) {
+      console.log('serving:' + asset);
+      return data;
+    })
+    .then(function(data) {
+      return exports.sendResponse(res, statusCode, data);
+    })
+    .catch(function(err) {
+      console.log('error serving asset');
+      console.log(err);
+    });
+};
