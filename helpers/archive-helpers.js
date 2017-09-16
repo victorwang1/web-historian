@@ -28,12 +28,13 @@ exports.initialize = function(pathsObj) {
 // exports.urlList = [];
 exports.urlList = '';
 
-exports.readListOfUrls = function() {
+exports.readListOfUrls = function(callback) {
   fs.readFile(exports.paths.list, 'utf8', function(err, data) {
     if (!err) {
       // exports.urlList = data.split('\r\n')
       //                       .map((url) => url.trim());
       exports.urlList = data;
+      callback();
     } else {
       console.log("cannot read url list");
     }
@@ -41,9 +42,13 @@ exports.readListOfUrls = function() {
 };
 
 exports.isUrlInList = function(url, callback) {
-  exports.readListOfUrls();
-  if (exports.urlList.indexOf(url) > -1) callback(true);
-  else callback(false);
+  exports.readListOfUrls(function() {
+    // console.log(exports.urlList);
+    // console.log(url);
+    // console.log(exports.urlList.includes(url));
+    if (exports.urlList.includes(url)) callback(true);
+    else callback(false);
+  });
 };
 
 exports.addUrlToList = function(url) {

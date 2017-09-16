@@ -35,7 +35,7 @@ exports.handleRequest = function (req, res) {
         httpHelper.sendResponse(res, 300, 'input url not valid');
       } else {
         archive.isUrlInList(requestedUrl, function(inList) {
-          if (inList) {
+          if (inList === true) {
             // if requestedUrl is in list
               // ask http-helper to serve request
             console.log('requested url is in list');
